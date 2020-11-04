@@ -9,7 +9,7 @@ var b1, b2, slider, shaked, light, sound, temp;
 // Global assets
 let yoff = 0.0;
 let miracleFont, catGif, mapPng;
-let dogPng, cloudPng, moonPng, shipPng;
+let dogPng, cloudPng, moonPng, shipPng, lightBeam;
 let fishCatPng, danceCatPng;
 let rainS, seaS, pianoS;
 // Lights
@@ -38,6 +38,7 @@ function preload() {
   mapPng = loadImage("images/map.png");
   cloudPng = loadImage("images/cloud.png");
   moonPng = loadImage("images/moon.png");
+  lightBeam = loadImage("images/lightbeam.png");
   shipPng = loadImage("images/ship.png");
   dogPng = loadImage("images/dog.gif");
   fishCatPng = loadImage("images/fishingCat.gif");
@@ -66,6 +67,7 @@ function setup() {
   pianoS.play();
   rainS.setVolume(.1);
   mapPng.resize(900,900);
+  lightBeam.resize(600,200);
   moonPng.resize(150,150);
   shipPng.resize(400,400)
   dogPng.resize(80,80)
@@ -124,9 +126,7 @@ function draw() {
 
     // B2 = Lighthouse turns on.
     if (b2 ==1) {
-      fill(255,255,0, 50);
-      noStroke();
-      ellipse(1200, 150, 200,200);
+      image(lightBeam, 600, 70);
       }
     // Draw assets.
 
