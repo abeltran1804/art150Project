@@ -1,6 +1,6 @@
 // Setup for ports
 var serial;         
-var portName = '/dev/tty.usbmodem14201';  
+var portName = '/dev/tty.usbmodem14101';  
 // Capture Arduino values
 var inData;  
 var newValue; 
@@ -10,9 +10,8 @@ var b1, b2, slider, shaked, light, sound, temp;
 let yoff = 0.0;
 let miracleFont, catGif, mapPng;
 let dogPng, cloudPng, moonPng, shipPng;
-let fishCatPng;
-let music;
-
+let fishCatPng, danceCatPng;
+let rainS, seaS, pianoS;
 // Lights
 let starsX = [];
 let starsY = [];
@@ -32,14 +31,17 @@ let xCloud;
 let clouds = [];
 
 function preload() {
-  music = loadSound('music/theme.mp3');
+  rainS = loadSound('music/rain.mp3');
+  seaS = loadSound('music/sea.mp3');
+  pianoS = loadSound('music/piano.mp3');
   catGif = loadImage("images/cat.gif");
   mapPng = loadImage("images/map.png");
   cloudPng = loadImage("images/cloud.png");
   moonPng = loadImage("images/moon.png");
   shipPng = loadImage("images/ship.png");
   dogPng = loadImage("images/dog.gif");
-  fishCatPng = loadImage("images/fishingCat.gif")
+  fishCatPng = loadImage("images/fishingCat.gif");
+  danceCatPng = loadImage("images/danceCat.gif")
   miracleFont = loadFont("fonts/miracle.ttf");
 }
 
@@ -56,14 +58,19 @@ function setup() {
   c1 = -800; c2 = -800; c3 = -800;
   c4 = 1500; c5 = 1500; c6 = 1500;
   // Asset setup.
-  // music.loop();
-  // music.play();
+  seaS.setVolume(0.05)
+  seaS.loop();
+  seaS.play();
+  pianoS.setVolume(0.1)
+  pianoS.loop();
+  pianoS.play();
+  rainS.setVolume(.1);
   mapPng.resize(900,900);
   moonPng.resize(150,150);
   shipPng.resize(400,400)
   dogPng.resize(80,80)
-  music.setVolume(0.3);
   catGif.resize(80,80);
+  danceCatPng.resize(80, 100);
   fishCatPng.resize(90,90);
   catGif.delay(50);
 
@@ -110,10 +117,19 @@ function draw() {
     else 
       cloudyTime();
     
+    // Handle button cases.
+    // B1 = Pirate ship appears.
     if (b1 == 1) 
-      toggleShip = true;
+      toggleShip = true;  
+
+    // B2 = Lighthouse turns on.
+    if (b2 ==1) {
+      fill(255,255,0, 50);
+      noStroke();
+      ellipse(1200, 150, 200,200);
+      }
     // Draw assets.
-    fill(255);
+
     drawConstants();
     // text(inData, 100, 100);
     // Draw rain if slider on.
@@ -122,8 +138,9 @@ function draw() {
       showShip(5);
     else
       showShip(-5);
-      noStroke();
-      drawWaves(600, 655, color(217, 74, 30));
+    noStroke();
+    drawWaves(600, 655, color(217, 74, 30));
+
   } else {
     background(0);
     fill(255);
@@ -133,6 +150,7 @@ function draw() {
     
   }
 }
+
 
 function cloudyTime() {
   noStroke();
@@ -148,6 +166,7 @@ function cloudyTime() {
 }
 
 function drawRain() {
+  soundRain();
   if (slider === 1) {
     if (sliderPrev === 0) {
       for (i = 0; i < rain.length; i++) {
@@ -173,15 +192,15 @@ function drawRain() {
   }
 }
 
+function soundRain() {
+  if (rainS.isPlaying() && slider == 0 ) {
+    rainS.pause();}
+  else if (!rainS.isPlaying() && slider == 1) {
+    rainS.play(); rainS.setVolume(.1) }
+}
+
 function decideTime() { 
   // DayTime
-  if (light >= 600) {
-    music.setVolume(0.3);
-  } else if (light >= 300) {
-    music.setVolume(0.1);
-  } else {
-    music.setVolume(0);
-  }
   noStroke();
   // Sky
   skyHue = map(light, 0, 1023, 210, 180);
@@ -190,7 +209,7 @@ function decideTime() {
   // Sun
   sunHue = map(light, 0, 1023, 20, 60);
   sunPosition = map(light, 0, 1023, 550, 100);
-  fill(sunHue, 100, 100)
+  fill(sunHue, 100, 100);
   ellipse(350, sunPosition, 100, 100);
   if (light <= 300) {
     showStars();
@@ -225,7 +244,7 @@ function showShip(move) {
   if (shipX > -1000 && !toggleShip || shipX < 240 && toggleShip)
     shipX += move;
   if (shipX >= 240)
-    toggleShip = false;
+    shipTime = millis();
   image(shipPng, shipX, 250)
   image(dogPng, shipX+150, 460);
 }
@@ -265,6 +284,7 @@ function drawConstants() {
   image(mapPng, 630, -50);
   image(catGif, 850, 470);
   image(fishCatPng, 1250, 500);
+  image(danceCatPng, 980, 280);
   moveClouds();
 }
 
