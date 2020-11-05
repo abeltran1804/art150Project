@@ -1,9 +1,9 @@
 // Setup for ports
-var serial;         
-var portName = '/dev/tty.usbmodem14101';  
+var serial;
+var portName = '/dev/tty.usbmodem14101';
 // Capture Arduino values
-var inData;  
-var newValue; 
+var inData;
+var newValue;
 var b1, b2, slider, shaked, light, sound, temp;
 
 // Global assets
@@ -11,7 +11,10 @@ let yoff = 0.0;
 let miracleFont, catGif, mapPng;
 let dogPng, cloudPng, moonPng, shipPng, lightBeam;
 let fishCatPng, danceCatPng;
-let rainS, seaS, pianoS;
+let tentacles, catKren;
+let rainS, seaS, pianoS, growlS;
+let woof, creak;
+
 // Lights
 let starsX = [];
 let starsY = [];
@@ -24,13 +27,23 @@ let c1, c2, c3, c4, c5, c6;
 // Ship 
 let toggleShip;
 let shipX;
+let timeToWait, initTime;
 
 let button, toggleOn;
+
+// Accel
+let toggleKraken, krakenX;
+let initTimeK;
+
 // Clouds when not raininig.
 let xCloud;
 let clouds = [];
 
+// Preload all the needed images, sounds, etc.
 function preload() {
+  growlS = loadSound('music/growl.mp3');
+  woof = loadSound('music/woof.mp3');
+  creak = loadSound('music/creak.wav');
   rainS = loadSound('music/rain.mp3');
   seaS = loadSound('music/sea.mp3');
   pianoS = loadSound('music/piano.mp3');
@@ -42,7 +55,9 @@ function preload() {
   shipPng = loadImage("images/ship.png");
   dogPng = loadImage("images/dog.gif");
   fishCatPng = loadImage("images/fishingCat.gif");
-  danceCatPng = loadImage("images/danceCat.gif")
+  danceCatPng = loadImage("images/danceCat.gif");
+  tentacles = loadImage("images/tentacles.gif");
+  catKren = loadImage("images/catken.gif");
   miracleFont = loadFont("fonts/miracle.ttf");
 }
 
@@ -51,29 +66,36 @@ function setup() {
   noStroke();
   createCanvas(windowWidth, windowHeight);
   colorMode(HSB);
-  // button = createButton('start');
-  // button.position(330,150);
-  // button.mousePressed(startGame);
-  toggleOn, toggleShip = false;
+
+  // Init global vars that have movement.
+  toggleOn, toggleShip, toggleKraken = false;
   shipX = -800; xCloud = -800;
+  krakenX = 500;
+  timeToWait = 8000;
   c1 = -800; c2 = -800; c3 = -800;
   c4 = 1500; c5 = 1500; c6 = 1500;
+
   // Asset setup.
+  woof.setVolume(0.1);
+  creak.setVolume(0.3);
   seaS.setVolume(0.05)
   seaS.loop();
   seaS.play();
-  pianoS.setVolume(0.1)
+  pianoS.setVolume(0.1);
+  growlS.setVolume(.5);
   pianoS.loop();
   pianoS.play();
   rainS.setVolume(.1);
-  mapPng.resize(900,900);
-  lightBeam.resize(600,200);
-  moonPng.resize(150,150);
-  shipPng.resize(400,400)
-  dogPng.resize(80,80)
-  catGif.resize(80,80);
+  mapPng.resize(900, 900);
+  lightBeam.resize(600, 200);
+  moonPng.resize(150, 150);
+  shipPng.resize(400, 400)
+  dogPng.resize(80, 80)
+  catGif.resize(80, 80);
   danceCatPng.resize(80, 100);
-  fishCatPng.resize(90,90);
+  fishCatPng.resize(90, 90);
+  tentacles.resize(500, 400);
+  catKren.resize(400, 400);
   catGif.delay(50);
 
   // Populate stars.
@@ -82,73 +104,84 @@ function setup() {
   // Add rain droplets to array;
   populateRain();
 
-  // Assign values.
-  b1 = 0;
-  b1 = 0;
-  slider = 0;
-  shaked = 0;
-  light = 900;
-  sound = 0;
+  // Assign values to sensors.
+  b1 = 0; b1 = 0;
+  slider = 0; shaked = 0;
+  light = 900; sound = 0;
   temp = 0;
 
   // Connect to serial port to listen to.
-  serial = new p5.SerialPort();      
+  serial = new p5.SerialPort();
   serial.on('list', printList);
-  serial.list();  
+  serial.list();
   serial.on('connected', serverConnected);
-  serial.on('open', portOpen);       
-  serial.on('data', serialEvent);    
-  serial.on('error', serialError);   
-  serial.on('close', portClose);                        
-  serial.open(portName);             
+  serial.on('open', portOpen);
+  serial.on('data', serialEvent);
+  serial.on('error', serialError);
+  serial.on('close', portClose);
+  serial.open(portName);
 }
 
 function startGame() {
   toggleOn = true;
   button.hide();
 }
- 
+
 function draw() {
-  // On button pressed.
-  if (true) {
-    // Use the light sensor.
-    // Slider dependent (Rain)
-    if (slider === 0) {
-      decideTime();
-    }
-    else 
-      cloudyTime();
-    
-    // Handle button cases.
-    // B1 = Pirate ship appears.
-    if (b1 == 1) 
-      toggleShip = true;  
-
-    // B2 = Lighthouse turns on.
-    if (b2 ==1) {
-      image(lightBeam, 600, 70);
-      }
-    // Draw assets.
-
-    drawConstants();
-    // text(inData, 100, 100);
-    // Draw rain if slider on.
-    drawRain();
-    if (toggleShip)
-      showShip(5);
-    else
-      showShip(-5);
-    noStroke();
-    drawWaves(600, 655, color(217, 74, 30));
-
-  } else {
-    background(0);
-    fill(255);
-    textFont(miracleFont);
-    textSize(64);
-    text("Island Of Cats", 200, 80);
-    
+  // Use the light sensor.
+  // Slider dependent (Rain)
+  if (slider === 0) {
+    decideTime();
   }
+  else
+    cloudyTime();
+
+  // Handle button cases.
+  // B1 = Pirate ship appears.
+  if (b1 == 1) {
+    initTime = millis();
+    if (!creak.isPlaying())
+      creak.play();
+    toggleShip = true;
+  }
+
+  // B2 = Lighthouse turns on.
+  if (b2 == 1) {
+    image(lightBeam, 600, 70);
+  }
+
+  // Draw assets.
+  drawConstants();
+  //text(inData, 100, 100);
+  // Draw rain if slider on.
+  drawRain();
+
+  // Checks if the Arduino was shaked.
+  if (shaked == 1) {
+    initTimeK = millis();
+    toggleKraken = true;
+  }
+
+  // If button 2 was pressed show the pirate ship.
+  if (toggleShip)
+    showShip(5);
+  else
+    showShip(-5);
+
+  // If shaked show the catKren!
+  if (toggleKraken)
+    showKraken(-5);
+  else
+    showKraken(5);
+
+  noStroke();
+  drawWaves(600, 655, color(217, 74, 30));
+
+  // background(0);
+  // fill(255);
+  // textFont(miracleFont);
+  // textSize(64);
+  // text("Island Of Cats", 200, 80);  
 }
 
 
@@ -193,13 +226,15 @@ function drawRain() {
 }
 
 function soundRain() {
-  if (rainS.isPlaying() && slider == 0 ) {
-    rainS.pause();}
+  if (rainS.isPlaying() && slider == 0) {
+    rainS.pause();
+  }
   else if (!rainS.isPlaying() && slider == 1) {
-    rainS.play(); rainS.setVolume(.1) }
+    rainS.play(); rainS.setVolume(.1)
+  }
 }
 
-function decideTime() { 
+function decideTime() {
   // DayTime
   noStroke();
   // Sky
@@ -223,15 +258,15 @@ function drawClouds(move) {
   if (c1 > -1000 && slider == 0 || c1 < -200 && slider == 1)
     c1 += move;
   if (c2 > -1000 && slider == 0 || c2 < 0 && slider == 1)
-    c2 += move; 
+    c2 += move;
   if (c3 > -1000 && slider == 0 || c3 < 250 && slider == 1)
-    c3 += move; 
+    c3 += move;
   if (c4 > 550 && slider == 1 || c4 < 1800 && slider == 0)
-    c4 -= move; 
+    c4 -= move;
   if (c5 > 800 && slider == 1 || c5 < 1800 && slider == 0)
-    c5 -= move; 
+    c5 -= move;
   if (c6 > 1000 && slider == 1 || c6 < 1800 && slider == 0)
-    c6 -= move; 
+    c6 -= move;
   image(cloudPng, c1, -170);
   image(cloudPng, c2, -220);
   image(cloudPng, c3, -170);
@@ -243,16 +278,33 @@ function drawClouds(move) {
 function showShip(move) {
   if (shipX > -1000 && !toggleShip || shipX < 240 && toggleShip)
     shipX += move;
-  if (shipX >= 240)
-    shipTime = millis();
+  if (shipX >= 240) {
+    if (millis() - initTime > timeToWait)
+      toggleShip = false;
+    if (!woof.isPlaying())
+      woof.play();
+  }
   image(shipPng, shipX, 250)
-  image(dogPng, shipX+150, 460);
+  image(dogPng, shipX + 150, 460);
+}
+
+function showKraken(move) {
+  if (krakenX > 300 && toggleKraken || krakenX < 1000 && !toggleKraken)
+    krakenX += move;
+  if (krakenX <= 300) {
+    if (!growlS.isPlaying())
+      growlS.play();
+    if (millis() - initTimeK > timeToWait) 
+      toggleKraken = false;
+  }
+  image(tentacles, 100, krakenX);
+  image(catKren, 150, krakenX);
 }
 
 function populateStars() {
-  for (let i = 10; i < windowWidth; i+=random(20)+10) {
+  for (let i = 10; i < windowWidth; i += random(20) + 10) {
     append(starsX, i);
-    append(starsY, random(500)+10);
+    append(starsY, random(500) + 10);
   }
 }
 
@@ -313,9 +365,9 @@ function moveClouds() {
 // Functions to set up serial port 
 // Lists ports available.
 function printList(portList) {
- for (var i = 0; i < portList.length; i++) {
- print(i + " " + portList[i]);
- }
+  for (var i = 0; i < portList.length; i++) {
+    print(i + " " + portList[i]);
+  }
 }
 
 function serverConnected() {
