@@ -12,7 +12,7 @@ let miracleFont, catGif, mapPng;
 let dogPng, cloudPng, moonPng, shipPng, lightBeam;
 let fishCatPng, danceCatPng;
 let tentacles, catKren;
-let rainS, seaS, pianoS, growlS;
+let rainS, seaS, pianoS, growlS, waveS, hornS;
 let woof, creak;
 
 // Lights
@@ -29,11 +29,11 @@ let toggleShip;
 let shipX;
 let timeToWait, initTime;
 
-let button, toggleOn;
+let button, toggleOn, b2Prev;
 
 // Accel
 let toggleKraken, krakenX;
-let initTimeK;
+let initTimeK, shakePrev;
 
 // Clouds when not raininig.
 let xCloud;
@@ -41,7 +41,9 @@ let clouds = [];
 
 // Preload all the needed images, sounds, etc.
 function preload() {
+  hornS = loadSound('music/horn.mp3');
   growlS = loadSound('music/growl.mp3');
+  waveS = loadSound('music/wave.mp3');
   woof = loadSound('music/woof.mp3');
   creak = loadSound('music/creak.wav');
   rainS = loadSound('music/rain.mp3');
@@ -74,6 +76,7 @@ function setup() {
   timeToWait = 8000;
   c1 = -800; c2 = -800; c3 = -800;
   c4 = 1500; c5 = 1500; c6 = 1500;
+  shakedPrev = 0; b2Prev = 0;
 
   // Asset setup.
   woof.setVolume(0.1);
@@ -82,7 +85,7 @@ function setup() {
   seaS.loop();
   seaS.play();
   pianoS.setVolume(0.1);
-  growlS.setVolume(.5);
+  growlS.setVolume(.2);
   pianoS.loop();
   pianoS.play();
   rainS.setVolume(.1);
@@ -147,7 +150,12 @@ function draw() {
 
   // B2 = Lighthouse turns on.
   if (b2 == 1) {
+    if (b2Prev == 0) {
+      if (!hornS.isPlaying())
+        hornS.play();
+    }
     image(lightBeam, 600, 70);
+    b2Prev = b2;
   }
 
   // Draw assets.
@@ -158,8 +166,13 @@ function draw() {
 
   // Checks if the Arduino was shaked.
   if (shaked == 1) {
+    if (shakedPrev == 0) {
+      if (!waveS.isPlaying())
+        waveS.play();
+    }
     initTimeK = millis();
     toggleKraken = true;
+    shakedPrev = shaked;
   }
 
   // If button 2 was pressed show the pirate ship.
